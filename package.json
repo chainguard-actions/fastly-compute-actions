@@ -1,0 +1,34 @@
+{
+  "name": "@fastly/compute-actions",
+  "version": "0.1.0",
+  "description": "GitHub Actions for building on the Fastly platform.",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/fastly/compute-actions.git"
+  },
+  "author": "Fastly <oss@fastly.com>",
+  "contributors": [
+    "Kailan Blanks <kblanks@fastly.com>"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/fastly/compute-actions/issues"
+  },
+  "homepage": "https://github.com/fastly/compute-actions#readme",
+  "dependencies": {
+    "@actions/core": "1.11.1",
+    "@actions/exec": "^1.1.1",
+    "@actions/tool-cache": "2.0.1",
+    "@octokit/auth-action": "5.1.1",
+    "@octokit/rest": "21.0.2",
+    "@vercel/ncc": "^0.38.2",
+    "semver": "7.6.3"
+  },
+  "scripts": {
+    "bundle-setup": "npx ncc build setup/index.js -o setup/dist --license licenses.txt",
+    "bundle-build": "npx ncc build build/index.js -o build/dist --license licenses.txt",
+    "bundle-deploy": "npx ncc build deploy/index.js -o deploy/dist --license licenses.txt",
+    "bundle-all": "npm run bundle-setup && npm run bundle-build && npm run bundle-deploy"
+  }
+}

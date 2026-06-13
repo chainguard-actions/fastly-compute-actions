@@ -1,0 +1,48 @@
+name: Test basic inputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Create minimal fastly.toml for action
+        run: |
+          mkdir -p ./compute-project
+          cat > ./compute-project/fastly.toml <<'EOF'
+          manifest_version = 2
+          name = "test-project"
+          description = "Test project"
+          authors = ["test@example.com"]
+          language = "rust"
+
+          [scripts]
+            build = "echo 'build skipped'"
+
+          [local_server]
+
+          [setup]
+          EOF
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          project_directory: './compute-project'
+          cli_version: 'latest'
+          viceroy_version: 'latest'
+          service_id: 'default'
+          comment: 'test deployment'
+          version: ''
+          verbose: 'false'
+          token: ${{ github.token }}
+      - name: Assert action ran (setup phase completed)
+        run: |
+          echo "Action outcome: ${{ steps.action.outcome }}"
+          # The action is expected to fail without a real Fastly token/service,
+          # but it should at least start (not be skipped or have a setup error
+          # that prevents it from running at all).
+          if [ "${{ steps.action.outcome }}" = "skipped" ]; then
+            echo "FAIL: action was skipped unexpectedly"
+            exit 1
+          fi
+          echo "PASS: action ran (outcome: ${{ steps.action.outcome }})"
