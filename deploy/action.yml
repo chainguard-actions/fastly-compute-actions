@@ -1,0 +1,33 @@
+name: 'Deploy a Compute package'
+author: 'Fastly'
+description: 'Deploys a Compute package using the Fastly CLI.'
+
+branding:
+  icon: 'upload-cloud'
+  color: 'red'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
+
+inputs:
+  project_directory:
+    description: 'Directory of the project to build, relative to the repository root.'
+    required: false
+    default: './'
+  service_id:
+    description: 'The Fastly service ID to deploy to. Defaults to the value in fastly.toml'
+    required: false
+    default: 'default'
+  version:
+    description: 'Version to clone from. Can be "latest", "active", or the number of a specific version'
+    required: false
+    default: ''
+  verbose:
+    description: 'Set to true to enable verbose logging'
+    required: false
+    default: 'false'
+  comment:
+    description: 'An optional comment to be included with the deployed service version.'
+    required: false
+    default: ''

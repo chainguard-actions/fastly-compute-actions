@@ -1,0 +1,21 @@
+name: 'Build a Compute package'
+author: 'Fastly'
+description: 'Compiles and packages a Compute project using the Fastly CLI.'
+
+branding:
+  icon: 'layers'
+  color: 'red'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
+
+inputs:
+  project_directory:
+    description: 'Directory of the project to build, relative to the repository root.'
+    required: false
+    default: './'
+  verbose:
+    description: 'Set to true to enable verbose logging'
+    required: false
+    default: 'false'
