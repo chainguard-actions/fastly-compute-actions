@@ -10,6 +10,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 |---------|-----|-----------------|
 | v10 | [`v10`](https://github.com/chainguard-actions/fastly-compute-actions/tree/v10) | [`ca26ccc`](https://github.com/fastly/compute-actions/commit/ca26cccf1fa541576c6fbdf50d62feb6db6ba181) |
 | v12 | [`v12`](https://github.com/chainguard-actions/fastly-compute-actions/tree/v12) | [`3b4355c`](https://github.com/fastly/compute-actions/commit/3b4355cb74cc7428a92dad1194bd564898372d55) |
+| v13 | [`v13`](https://github.com/chainguard-actions/fastly-compute-actions/tree/v13) | [`9ca64d6`](https://github.com/fastly/compute-actions/commit/9ca64d641e165464cd4c0c988f2e549dc7d43b49) |
 
 ## Privacy
 
