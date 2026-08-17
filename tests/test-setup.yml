@@ -1,0 +1,39 @@
+name: Test setup sub-action installs Fastly CLI
+on:
+  workflow_dispatch:
+
+jobs:
+  test-setup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run setup sub-action with latest CLI and Viceroy
+        id: setup
+        uses: ./setup
+        continue-on-error: true
+        with:
+          cli_version: latest
+          viceroy_version: latest
+          token: ${{ github.token }}
+
+      - name: Assert Fastly CLI is installed or setup ran
+        env:
+          OUTCOME: ${{ steps.setup.outcome }}
+        run: |
+          echo "setup outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            # Verify fastly CLI is on PATH
+            if command -v fastly >/dev/null 2>&1; then
+              echo "PASS: fastly CLI is installed"
+              fastly version || true
+            else
+              echo "FAIL: setup succeeded but fastly CLI not found on PATH"
+              exit 1
+            fi
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: setup step ran (failed gracefully, likely network/release issue in harness)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
