@@ -1,4 +1,4 @@
-name: Test basic usage
+name: Test with service ID and comment
 on:
   workflow_dispatch:
 jobs:
@@ -22,18 +22,20 @@ jobs:
         uses: .
         with:
           project_directory: './test-project'
-          cli_version: 'latest'
+          service_id: 'test-service-id-123'
+          comment: 'Deployed via GitHub Actions test'
+          version: 'latest'
           token: 'fake-token-for-testing'
         continue-on-error: true
-      - name: Assert action ran (setup phase completed)
+      - name: Assert action ran with service ID and comment
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "action outcome: $OUTCOME"
           # The action is expected to fail without valid Fastly credentials,
-          # but it should at least attempt to run (not be skipped or have a setup error)
+          # but it should at least attempt to run (not be skipped)
           if [ "$OUTCOME" = "skipped" ]; then
             echo "FAIL: action was skipped unexpectedly"
             exit 1
           fi
-          echo "PASS: action ran (outcome: $OUTCOME)"
+          echo "PASS: action ran with service_id and comment inputs (outcome: $OUTCOME)"

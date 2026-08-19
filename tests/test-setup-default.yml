@@ -1,0 +1,46 @@
+name: Test setup with default (latest) CLI version
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Run only the setup sub-action directly to verify CLI installation
+      - id: setup
+        uses: ./setup
+        with:
+          cli_version: 'latest'
+          viceroy_version: 'latest'
+
+      - name: Assert Fastly CLI is installed
+        run: |
+          echo "Checking fastly CLI is available..."
+          if ! command -v fastly &>/dev/null; then
+            echo "FAIL: fastly CLI not found in PATH"
+            exit 1
+          fi
+          VERSION=$(fastly version 2>&1 || true)
+          echo "fastly version: $VERSION"
+          if [ -z "$VERSION" ]; then
+            echo "FAIL: fastly version returned empty output"
+            exit 1
+          fi
+          echo "PASS: fastly CLI is installed"
+
+      - name: Assert Viceroy is installed
+        run: |
+          echo "Checking viceroy is available..."
+          if ! command -v viceroy &>/dev/null; then
+            echo "FAIL: viceroy not found in PATH"
+            exit 1
+          fi
+          VERSION=$(viceroy --version 2>&1 || true)
+          echo "viceroy version: $VERSION"
+          if [ -z "$VERSION" ]; then
+            echo "FAIL: viceroy --version returned empty output"
+            exit 1
+          fi
+          echo "PASS: viceroy is installed"

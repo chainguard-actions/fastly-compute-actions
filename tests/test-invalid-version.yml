@@ -1,0 +1,26 @@
+name: Test invalid CLI version string is rejected
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Attempt to install with an invalid semver version — should fail
+      - id: setup
+        uses: ./setup
+        with:
+          cli_version: 'not-a-valid-version'
+        continue-on-error: true
+
+      - name: Assert setup step failed due to invalid version
+        run: |
+          OUTCOME="${{ steps.setup.outcome }}"
+          echo "setup outcome: $OUTCOME"
+          if [ "$OUTCOME" != "failure" ]; then
+            echo "FAIL: expected setup to fail with invalid version, but got outcome: $OUTCOME"
+            exit 1
+          fi
+          echo "PASS: setup correctly failed for invalid version string"

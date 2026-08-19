@@ -1,0 +1,37 @@
+name: Test setup with a specific CLI version
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Install a specific known version of the Fastly CLI
+      - id: setup
+        uses: ./setup
+        with:
+          cli_version: 'v10.15.0'
+          viceroy_version: 'latest'
+
+      - name: Assert Fastly CLI is installed at the specified version
+        run: |
+          echo "Checking fastly CLI is available..."
+          if ! command -v fastly &>/dev/null; then
+            echo "FAIL: fastly CLI not found in PATH"
+            exit 1
+          fi
+          VERSION=$(fastly version 2>&1 || true)
+          echo "fastly version output: $VERSION"
+          if [ -z "$VERSION" ]; then
+            echo "FAIL: fastly version returned empty output"
+            exit 1
+          fi
+          # Verify the installed version matches the requested version
+          if echo "$VERSION" | grep -q "10.15.0"; then
+            echo "PASS: fastly CLI version 10.15.0 is installed"
+          else
+            echo "FAIL: expected version 10.15.0 but got: $VERSION"
+            exit 1
+          fi
