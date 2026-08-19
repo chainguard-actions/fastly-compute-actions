@@ -1,0 +1,40 @@
+name: Test setup with pinned CLI version
+on:
+  workflow_dispatch:
+
+jobs:
+  test-setup-pinned-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Test that a specific pinned version of the Fastly CLI can be installed.
+      # The setup/index.js normalizes the version string (adds 'v' prefix if needed)
+      # and downloads the exact release from GitHub.
+      - name: Run setup sub-action with pinned CLI version
+        uses: ./setup
+        with:
+          cli_version: 'v10.15.0'
+          viceroy_version: 'latest'
+          token: ${{ github.token }}
+
+      - name: Assert Fastly CLI is installed at pinned version
+        run: |
+          echo "Checking fastly CLI is available..."
+          if ! command -v fastly &>/dev/null; then
+            echo "FAIL: fastly CLI not found in PATH"
+            exit 1
+          fi
+          FASTLY_VERSION=$(fastly version 2>&1 || true)
+          echo "fastly version output: $FASTLY_VERSION"
+          if [ -z "$FASTLY_VERSION" ]; then
+            echo "FAIL: fastly version returned empty output"
+            exit 1
+          fi
+          # Check that the installed version matches the pinned version
+          if echo "$FASTLY_VERSION" | grep -q "10.15.0"; then
+            echo "PASS: fastly CLI installed at pinned version 10.15.0"
+          else
+            echo "FAIL: expected version 10.15.0 but got: $FASTLY_VERSION"
+            exit 1
+          fi

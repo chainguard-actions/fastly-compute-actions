@@ -40,11 +40,11 @@ runs:
       id: service-name
       working-directory: ${{ inputs.project_directory }}
       env:
-        EVENT_NUMBER: ${{ github.event.number }}
+        PR_NUMBER: ${{ github.event.number }}
       run: |
-        raw="$(yq '.name' fastly.toml)-${EVENT_NUMBER}"
-        safe="$(printf '%s' "$raw" | tr -d '\n\r')"
-        echo "SERVICE_NAME=$safe" >> "$GITHUB_OUTPUT"
+        raw_name="$(yq '.name' fastly.toml)-${PR_NUMBER}"
+        safe_name="$(printf '%s' "$raw_name" | tr -d '\n\r')"
+        echo "SERVICE_NAME=$safe_name" >> "$GITHUB_OUTPUT"
       shell: bash
 
     # Delete the Fastly Service
@@ -53,7 +53,6 @@ runs:
       env:
         FASTLY_API_TOKEN: ${{ inputs.fastly-api-token }}
         SERVICE_NAME: ${{ steps.service-name.outputs.SERVICE_NAME }}
-        fastly_api_token: ${{ inputs.fastly-api-token }}
       run: fastly service delete --quiet --service-name "$SERVICE_NAME" --force --token "$FASTLY_API_TOKEN" || true
       shell: bash
 
@@ -63,7 +62,6 @@ runs:
       env:
         FASTLY_API_TOKEN: ${{ inputs.fastly-api-token }}
         SERVICE_NAME: ${{ steps.service-name.outputs.SERVICE_NAME }}
-        fastly_api_token: ${{ inputs.fastly-api-token }}
       run: |
         fastly compute publish --verbose -i --token "$FASTLY_API_TOKEN" --service-name "$SERVICE_NAME"
       shell: bash
@@ -86,9 +84,9 @@ runs:
         FASTLY_API_TOKEN: ${{ inputs.fastly-api-token }}
         SERVICE_NAME: ${{ steps.service-name.outputs.SERVICE_NAME }}
       run: |
-        raw="$(fastly domain list --quiet --version latest --json --service-name="$SERVICE_NAME" --token "$FASTLY_API_TOKEN" | jq -r '.[0].Name')"
-        safe="$(printf '%s' "$raw" | tr -d '\n\r')"
-        echo "DOMAIN=$safe" >> "$GITHUB_OUTPUT"
+        raw_domain="$(fastly domain list --quiet --version latest --json --service-name="$SERVICE_NAME" --token "$FASTLY_API_TOKEN" | jq -r '.[0].Name')"
+        safe_domain="$(printf '%s' "$raw_domain" | tr -d '\n\r')"
+        echo "DOMAIN=$safe_domain" >> "$GITHUB_OUTPUT"
 
     - if: github.event.action != 'closed'
       working-directory: ${{ inputs.project_directory }}

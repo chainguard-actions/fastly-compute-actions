@@ -1,0 +1,46 @@
+name: Test build fails without Fastly project
+on:
+  workflow_dispatch:
+
+jobs:
+  test-build-no-project:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # First install the Fastly CLI via the setup sub-action
+      - name: Install Fastly CLI
+        uses: ./setup
+        with:
+          cli_version: 'latest'
+          viceroy_version: 'latest'
+          token: ${{ github.token }}
+
+      - name: Assert Fastly CLI is installed
+        run: |
+          if ! command -v fastly &>/dev/null; then
+            echo "FAIL: fastly CLI not found in PATH after setup"
+            exit 1
+          fi
+          echo "PASS: fastly CLI is available"
+
+      # Run the build sub-action in a directory without a fastly.toml.
+      # This should fail because there is no valid Fastly Compute project.
+      - name: Create empty project directory (no fastly.toml)
+        run: mkdir -p /tmp/empty-project
+
+      - name: Run build sub-action without a valid project (expect failure)
+        id: build-no-project
+        uses: ./build
+        with:
+          project_directory: '/tmp/empty-project'
+        continue-on-error: true
+
+      - name: Assert build failed without a valid project
+        run: |
+          echo "Build step outcome: ${{ steps.build-no-project.outcome }}"
+          if [ "${{ steps.build-no-project.outcome }}" != "failure" ]; then
+            echo "FAIL: expected build to fail without a fastly.toml, but got: ${{ steps.build-no-project.outcome }}"
+            exit 1
+          fi
+          echo "PASS: build correctly failed without a valid Fastly Compute project"

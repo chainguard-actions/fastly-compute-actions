@@ -1,0 +1,51 @@
+name: Test setup with latest CLI version
+on:
+  workflow_dispatch:
+
+jobs:
+  test-setup-latest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # The action's pre step installs the Fastly CLI.
+      # The main step (build) requires a real Fastly project, so we expect it
+      # to fail. We verify the setup (pre) step ran by checking the CLI is
+      # available after the action's pre step executes.
+      # We use a separate setup sub-action call to test the install logic.
+      - name: Run setup sub-action to install Fastly CLI
+        uses: ./setup
+        with:
+          cli_version: 'latest'
+          viceroy_version: 'latest'
+          token: ${{ github.token }}
+
+      - name: Assert Fastly CLI is installed
+        run: |
+          echo "Checking fastly CLI is available..."
+          if ! command -v fastly &>/dev/null; then
+            echo "FAIL: fastly CLI not found in PATH"
+            exit 1
+          fi
+          FASTLY_VERSION=$(fastly version 2>&1 || true)
+          echo "fastly version output: $FASTLY_VERSION"
+          if [ -z "$FASTLY_VERSION" ]; then
+            echo "FAIL: fastly version returned empty output"
+            exit 1
+          fi
+          echo "PASS: fastly CLI is installed and responds to version"
+
+      - name: Assert Viceroy is installed
+        run: |
+          echo "Checking viceroy is available..."
+          if ! command -v viceroy &>/dev/null; then
+            echo "FAIL: viceroy not found in PATH"
+            exit 1
+          fi
+          VICEROY_VERSION=$(viceroy --version 2>&1 || true)
+          echo "viceroy version output: $VICEROY_VERSION"
+          if [ -z "$VICEROY_VERSION" ]; then
+            echo "FAIL: viceroy --version returned empty output"
+            exit 1
+          fi
+          echo "PASS: viceroy is installed and responds to --version"

@@ -1,0 +1,28 @@
+name: Test invalid CLI version input
+on:
+  workflow_dispatch:
+
+jobs:
+  test-invalid-cli-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # The setup sub-action validates the cli_version as a semver string.
+      # Providing an invalid version should cause the step to fail.
+      - name: Run setup with invalid cli_version (expect failure)
+        id: setup-invalid
+        uses: ./setup
+        with:
+          cli_version: 'not-a-valid-semver'
+          token: ${{ github.token }}
+        continue-on-error: true
+
+      - name: Assert setup failed with invalid version
+        run: |
+          echo "Setup step outcome: ${{ steps.setup-invalid.outcome }}"
+          if [ "${{ steps.setup-invalid.outcome }}" != "failure" ]; then
+            echo "FAIL: expected setup to fail with invalid semver version, but got: ${{ steps.setup-invalid.outcome }}"
+            exit 1
+          fi
+          echo "PASS: setup correctly failed with invalid cli_version"

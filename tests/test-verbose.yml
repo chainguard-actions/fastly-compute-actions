@@ -1,4 +1,4 @@
-name: Test basic usage
+name: Test verbose mode
 on:
   workflow_dispatch:
 jobs:
@@ -6,24 +6,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - name: Test action invocation with default inputs
+      - name: Test action with verbose enabled
         id: action
         uses: .
         with:
           project_directory: './'
           cli_version: 'latest'
-          viceroy_version: 'latest'
-          verbose: 'false'
+          verbose: 'true'
         continue-on-error: true
-      - name: Assert action was invoked (setup ran)
+      - name: Assert action was invoked with verbose flag
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "action outcome: $OUTCOME"
-          # The action will fail without a valid Fastly token/service, but it should
-          # at least be invoked (not skipped). Either 'success' or 'failure' means it ran.
+          # The action will fail without Fastly credentials, but it should
+          # be invoked (not skipped). Either 'success' or 'failure' means it ran.
           if [ "$OUTCOME" = "skipped" ]; then
             echo "FAIL: action was skipped, expected it to run"
             exit 1
           fi
-          echo "PASS: action was invoked (outcome=$OUTCOME)"
+          echo "PASS: action was invoked with verbose=true (outcome=$OUTCOME)"
