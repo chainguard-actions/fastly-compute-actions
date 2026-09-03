@@ -1,0 +1,6 @@
+{
+  "name": "test-preview-service",
+  "version": "1.0.0",
+  "description": "Test Fastly Compute service",
+  "private": true
+}

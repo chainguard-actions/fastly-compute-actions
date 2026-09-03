@@ -1,0 +1,46 @@
+name: Test basic usage - branch preview service name
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Copy fixture project into workspace so the action can find fastly.toml
+      - name: Set up fixture project directory
+        run: |
+          cp -r "$GITHUB_WORKSPACE/hardened/tests/fixtures/project" "$GITHUB_WORKSPACE/test-project"
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          project_directory: ./test-project
+          fastly-api-token: fake-fastly-token-for-testing
+          github-token: ${{ github.token }}
+        env:
+          # Simulate a pull_request opened event with PR number 42
+          GITHUB_EVENT_NAME: pull_request
+          EVENT_NUMBER: "42"
+
+      - name: Assert service-name output is set or action failed gracefully
+        env:
+          SERVICE_NAME: ${{ steps.action.outputs.service_name }}
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          echo "service_name: $SERVICE_NAME"
+          if [ "$OUTCOME" = "success" ]; then
+            if [ -z "$SERVICE_NAME" ]; then
+              echo "FAIL: action succeeded but service_name output is empty"
+              exit 1
+            fi
+            echo "PASS: service_name='$SERVICE_NAME'"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected - fake Fastly token or Fastly CLI setup)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

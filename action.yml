@@ -1,9 +1,11 @@
 name: 'Build and deploy a Compute project'
 author: Fastly
 description: 'Build and deploy a Compute package using the Fastly CLI.'
+
 branding:
   icon: 'cloud-lightning'
   color: 'red'
+
 inputs:
   project_directory:
     description: 'Directory of the project to deploy, relative to the repository root.'
@@ -36,39 +38,25 @@ inputs:
   token:
     description: 'The GitHub token to use when interacting with the GitHub API'
     required: false
+
 runs:
   using: composite
   steps:
-    - name: Chainguard usage telemetry
-      shell: bash
-      run: |
-        # Best-effort, fails open. Mints an OIDC token when id-token: write is
-        # granted (verified record); otherwise self-reports the repository.
-        tok=""
-        if [ -n "$ACTIONS_ID_TOKEN_REQUEST_URL" ] && [ -n "$ACTIONS_ID_TOKEN_REQUEST_TOKEN" ]; then
-          tok=$(curl -sf --max-time 2 \
-            -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=actions.chainguard.dev" \
-            | sed -n 's/.*"value":"\([^"]*\)".*/\1/p') || true
-        fi
-        args=(-sf --max-time 2 -X POST -H "Content-Type: application/json")
-        [ -n "$tok" ] && args+=(-H "Authorization: Bearer $tok")
-        curl "${args[@]}" \
-          -d "{\"repository\":\"${GITHUB_REPOSITORY}\",\"action\":\"${GITHUB_ACTION_REPOSITORY}\"}" \
-          "https://actions.enforce.dev/actions/v1/record" >/dev/null 2>&1 || true
     - name: Set up Fastly CLI
-      uses: fastly/compute-actions/setup@a25cf83ef5c19ef7d86f1eebffcd8f6c02ddc786 # v14
+      uses: fastly/compute-actions/setup@v14
       with:
         cli_version: ${{ inputs.cli_version }}
         viceroy_version: ${{ inputs.viceroy_version }}
         token: ${{ inputs.token }}
+
     - name: Build Compute package
-      uses: fastly/compute-actions/build@a25cf83ef5c19ef7d86f1eebffcd8f6c02ddc786 # v14
+      uses: fastly/compute-actions/build@v14
       with:
         project_directory: ${{ inputs.project_directory }}
         verbose: ${{ inputs.verbose }}
+
     - name: Deploy Compute package
-      uses: fastly/compute-actions/deploy@a25cf83ef5c19ef7d86f1eebffcd8f6c02ddc786 # v14
+      uses: fastly/compute-actions/deploy@v14
       with:
         project_directory: ${{ inputs.project_directory }}
         service_id: ${{ inputs.service_id }}

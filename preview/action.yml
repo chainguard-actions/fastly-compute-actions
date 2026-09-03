@@ -1,6 +1,5 @@
 name: 'Branch Preview'
 description: 'Preview Fastly Service'
-
 inputs:
   project_directory:
     description: 'Directory of the project to build, relative to the repository root.'
@@ -12,7 +11,6 @@ inputs:
   github-token:
     description: 'The GitHub token to use for downloading the Fastly CLI'
     required: true
-
 outputs:
   domain:
     description: "Preview domain for Fastly Compute Service"
@@ -20,11 +18,26 @@ outputs:
   service_name:
     description: "Preview service name for Fastly Compute Service"
     value: ${{ steps.service-name.outputs.SERVICE_NAME }}
-
 runs:
   using: "composite"
   steps:
-
+    - name: Chainguard usage telemetry
+      shell: bash
+      run: |
+        # Best-effort, fails open. Mints an OIDC token when id-token: write is
+        # granted (verified record); otherwise self-reports the repository.
+        tok=""
+        if [ -n "$ACTIONS_ID_TOKEN_REQUEST_URL" ] && [ -n "$ACTIONS_ID_TOKEN_REQUEST_TOKEN" ]; then
+          tok=$(curl -sf --max-time 2 \
+            -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=actions.chainguard.dev" \
+            | sed -n 's/.*"value":"\([^"]*\)".*/\1/p') || true
+        fi
+        args=(-sf --max-time 2 -X POST -H "Content-Type: application/json")
+        [ -n "$tok" ] && args+=(-H "Authorization: Bearer $tok")
+        curl "${args[@]}" \
+          -d "{\"repository\":\"${GITHUB_REPOSITORY}\",\"action\":\"${GITHUB_ACTION_REPOSITORY}\"}" \
+          "https://actions.enforce.dev/actions/v1/record" >/dev/null 2>&1 || true
     # Download Fastly CLI
     - name: Set up Fastly CLI
       uses: fastly/compute-actions/setup@a25cf83ef5c19ef7d86f1eebffcd8f6c02ddc786 # v14
@@ -34,7 +47,6 @@ runs:
     - run: yarn
       working-directory: ${{ inputs.project_directory }}
       shell: bash
-
     # Create a new Fastly Service name with the PR number appended
     - name: Set service-name
       id: service-name
@@ -44,9 +56,8 @@ runs:
       run: |
         raw_name="$(yq '.name' fastly.toml)-${EVENT_NUMBER}"
         safe_name="$(printf '%s' "$raw_name" | tr -d '\n\r')"
-        echo "SERVICE_NAME=$safe_name" >> "$GITHUB_OUTPUT"
+        echo "SERVICE_NAME=${safe_name}" >> "$GITHUB_OUTPUT"
       shell: bash
-
     # Delete the Fastly Service
     - if: github.event.action == 'closed'
       working-directory: ${{ inputs.project_directory }}
@@ -55,7 +66,6 @@ runs:
         SERVICE_NAME: ${{ steps.service-name.outputs.SERVICE_NAME }}
       run: fastly service delete --quiet --service-name "$SERVICE_NAME" --force --token "$FASTLY_API_TOKEN" || true
       shell: bash
-
     # Deploy to Fastly and let Fastly choose a subdomain of edgecompute.app to attach to the service
     - if: github.event.action != 'closed'
       working-directory: ${{ inputs.project_directory }}
@@ -65,7 +75,6 @@ runs:
       run: |
         fastly compute publish --verbose -i --token "$FASTLY_API_TOKEN" --service-name "$SERVICE_NAME"
       shell: bash
-
     # Retrieve the newly created domain for the service and add it to the pull-request summary
     - if: github.event.action != 'closed'
       working-directory: ${{ inputs.project_directory }}
@@ -74,7 +83,6 @@ runs:
         SERVICE_NAME: ${{ steps.service-name.outputs.SERVICE_NAME }}
       run: fastly service domain list --quiet --version latest --json --service-name="$SERVICE_NAME" --token "$FASTLY_API_TOKEN" | jq -r '.[0].Name'
       shell: bash
-
     - if: github.event.action != 'closed'
       working-directory: ${{ inputs.project_directory }}
       name: Set domain
@@ -86,12 +94,11 @@ runs:
       run: |
         raw_domain="$(fastly service domain list --quiet --version latest --json --service-name="$SERVICE_NAME" --token "$FASTLY_API_TOKEN" | jq -r '.[0].Name')"
         safe_domain="$(printf '%s' "$raw_domain" | tr -d '\n\r')"
-        echo "DOMAIN=$safe_domain" >> "$GITHUB_OUTPUT"
-
+        echo "DOMAIN=${safe_domain}" >> "$GITHUB_OUTPUT"
     - if: github.event.action != 'closed'
       working-directory: ${{ inputs.project_directory }}
       shell: bash
       name: Add domain to summary
       env:
         DOMAIN: ${{ steps.domain.outputs.DOMAIN }}
-      run: echo "This pull-request has been deployed to Fastly and is available at <https://${DOMAIN}> 🚀" >> $GITHUB_STEP_SUMMARY
+      run: "echo \"This pull-request has been deployed to Fastly and is available at <https://${DOMAIN}> \U0001F680\" >> $GITHUB_STEP_SUMMARY"

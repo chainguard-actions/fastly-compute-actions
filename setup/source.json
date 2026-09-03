@@ -1,0 +1,11 @@
+{
+  "owner": "fastly",
+  "repo": "compute-actions",
+  "version": "v14",
+  "commit_sha": "a25cf83ef5c19ef7d86f1eebffcd8f6c02ddc786",
+  "url": "https://github.com/fastly/compute-actions",
+  "policy_sha": "d636be7e43ef829af6e853da6b3c7566db9f72fe",
+  "test_policy_sha": "843adf9e4b8f85d0c08b27b9d0b09dd094b54702",
+  "test_agent_version": "2",
+  "harden_agent_version": "2"
+}

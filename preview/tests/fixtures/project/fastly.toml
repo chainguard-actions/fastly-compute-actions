@@ -1,0 +1,7 @@
+manifest_version = 2
+name = "test-preview-service"
+description = "Test Fastly Compute service"
+authors = ["test@example.com"]
+language = "javascript"
+[scripts]
+build = "js-compute-runtime index.js ./bin/main.wasm"
