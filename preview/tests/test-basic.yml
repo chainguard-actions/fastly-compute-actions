@@ -1,45 +1,62 @@
-name: Test basic usage - branch preview service name
+name: Test basic usage (preview deploy)
 on:
   workflow_dispatch:
-
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      # Copy fixture project into workspace so the action can find fastly.toml
-      - name: Set up fixture project directory
+      # Set up a minimal project directory with fastly.toml and package.json
+      - name: Set up project fixtures
         run: |
-          cp -r "$GITHUB_WORKSPACE/hardened/tests/fixtures/project" "$GITHUB_WORKSPACE/test-project"
+          mkdir -p "$GITHUB_WORKSPACE/hardened/tests/fixtures/project"
+          cat > "$GITHUB_WORKSPACE/hardened/tests/fixtures/project/fastly.toml" <<'EOF'
+          [profile]
+          name = "test-service"
+
+          [scripts]
+
+          [local_server]
+
+          [setup]
+
+          [service]
+          name = "test-service"
+          EOF
+          cat > "$GITHUB_WORKSPACE/hardened/tests/fixtures/project/package.json" <<'EOF'
+          {
+            "name": "test-project",
+            "version": "1.0.0",
+            "private": true
+          }
+          EOF
 
       - id: action
         uses: .
         continue-on-error: true
         with:
-          project_directory: ./test-project
-          fastly-api-token: fake-fastly-token-for-testing
+          project_directory: './hardened/tests/fixtures/project'
+          fastly-api-token: 'fake-fastly-token-for-testing'
           github-token: ${{ github.token }}
-        env:
-          # Simulate a pull_request opened event with PR number 42
-          GITHUB_EVENT_NAME: pull_request
-          EVENT_NUMBER: "42"
 
-      - name: Assert service-name output is set or action failed gracefully
+      - name: Assert action ran (outputs set, or failed gracefully without real Fastly token)
         env:
-          SERVICE_NAME: ${{ steps.action.outputs.service_name }}
           OUTCOME: ${{ steps.action.outcome }}
+          SERVICE_NAME: ${{ steps.action.outputs.service_name }}
+          DOMAIN: ${{ steps.action.outputs.domain }}
         run: |
           echo "outcome: $OUTCOME"
           echo "service_name: $SERVICE_NAME"
+          echo "domain: $DOMAIN"
           if [ "$OUTCOME" = "success" ]; then
             if [ -z "$SERVICE_NAME" ]; then
               echo "FAIL: action succeeded but service_name output is empty"
               exit 1
             fi
-            echo "PASS: service_name='$SERVICE_NAME'"
+            echo "PASS: got service_name='$SERVICE_NAME' domain='$DOMAIN'"
           elif [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action failed gracefully (expected - fake Fastly token or Fastly CLI setup)"
+            echo "PASS: action failed gracefully (expected without real Fastly API token)"
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1

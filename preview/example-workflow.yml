@@ -4,8 +4,6 @@ concurrency:
 on:
   pull_request:
     types: [opened, synchronize, reopened, closed]
-permissions:
-  contents: read
 jobs:
   deploy:
     runs-on: ubuntu-latest

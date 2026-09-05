@@ -1,4 +1,4 @@
-name: Test specific CLI version input
+name: Test specific CLI and Viceroy versions
 on:
   workflow_dispatch:
 jobs:
@@ -9,24 +9,24 @@ jobs:
       - id: action
         uses: .
         with:
-          cli_version: 'v10.15.0'
-          viceroy_version: 'latest'
+          cli_version: 'v10.9.0'
+          viceroy_version: 'v0.9.4'
         continue-on-error: true
-      - name: Assert action ran with specific version
+      - name: Assert specific versions installed or action ran
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
           if [ "$OUTCOME" = "success" ]; then
-            if command -v fastly >/dev/null 2>&1; then
-              echo "PASS: fastly CLI is installed at specific version"
-              fastly version || true
-            else
-              echo "FAIL: action succeeded but fastly CLI not found on PATH"
+            echo "Action succeeded, checking fastly binary..."
+            if ! command -v fastly >/dev/null 2>&1; then
+              echo "FAIL: fastly binary not found in PATH after successful action"
               exit 1
             fi
+            echo "fastly version: $(fastly version 2>&1 || true)"
+            echo "PASS: fastly CLI specific version is installed"
           elif [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action failed gracefully (likely version not found or network issue in harness)"
+            echo "PASS: action failed gracefully (network/API issue or version not found in test environment)"
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1

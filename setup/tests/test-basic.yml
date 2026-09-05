@@ -1,4 +1,4 @@
-name: Test basic usage (default inputs)
+name: Test basic usage (default latest versions)
 on:
   workflow_dispatch:
 jobs:
@@ -9,22 +9,21 @@ jobs:
       - id: action
         uses: .
         continue-on-error: true
-      - name: Assert action ran (CLI installed or failed gracefully)
+      - name: Assert fastly CLI is installed or action ran
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
           if [ "$OUTCOME" = "success" ]; then
-            # Verify fastly CLI is available on PATH
-            if command -v fastly >/dev/null 2>&1; then
-              echo "PASS: fastly CLI is installed"
-              fastly version || true
-            else
-              echo "FAIL: action succeeded but fastly CLI not found on PATH"
+            echo "Action succeeded, checking fastly binary..."
+            if ! command -v fastly >/dev/null 2>&1; then
+              echo "FAIL: fastly binary not found in PATH after successful action"
               exit 1
             fi
+            echo "fastly version: $(fastly version 2>&1 || true)"
+            echo "PASS: fastly CLI is installed"
           elif [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action failed gracefully (likely API rate limit or network issue in harness)"
+            echo "PASS: action failed gracefully (network/API issue in test environment)"
           else
             echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1
