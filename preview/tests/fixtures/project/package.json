@@ -1,6 +1,9 @@
 {
-  "name": "test-preview-service",
+  "name": "test-fastly-project",
   "version": "1.0.0",
-  "description": "Test Fastly Compute service",
-  "private": true
+  "description": "Minimal test project for Fastly Compute action",
+  "scripts": {
+    "build": "echo 'build'"
+  },
+  "dependencies": {}
 }

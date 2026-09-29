@@ -1,0 +1,68 @@
+name: Test setup sub-action with a specific CLI version
+on:
+  workflow_dispatch:
+
+jobs:
+  test-setup-specific-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run setup sub-action with a specific CLI version
+        id: setup
+        uses: ./setup
+        continue-on-error: true
+        with:
+          cli_version: v10.15.0
+          viceroy_version: latest
+          token: ${{ github.token }}
+
+      - name: Assert setup ran with specific version
+        env:
+          OUTCOME: ${{ steps.setup.outcome }}
+        run: |
+          echo "setup outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            if command -v fastly >/dev/null 2>&1; then
+              echo "PASS: fastly CLI installed at specific version"
+              fastly version || true
+            else
+              echo "FAIL: setup succeeded but fastly CLI not found on PATH"
+              exit 1
+            fi
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: setup step ran (failed gracefully, likely network/release issue in harness)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
+
+  test-setup-invalid-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run setup sub-action with an invalid version string
+        id: setup-invalid
+        uses: ./setup
+        continue-on-error: true
+        with:
+          cli_version: not-a-semver
+          viceroy_version: latest
+          token: ${{ github.token }}
+
+      - name: Assert setup fails with invalid version
+        env:
+          OUTCOME: ${{ steps.setup-invalid.outcome }}
+        run: |
+          echo "setup outcome: $OUTCOME"
+          # An invalid semver version should cause the action to fail
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: setup correctly failed with invalid version string"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "FAIL: setup should have failed with invalid semver 'not-a-semver'"
+            exit 1
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

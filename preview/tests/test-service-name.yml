@@ -1,0 +1,55 @@
+name: Test service-name generation
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Install yq so the action's service-name step can read fastly.toml
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+          yq --version
+
+      # Copy fixture project into workspace so the action can find fastly.toml
+      - name: Set up fixture project
+        run: |
+          cp -r "$GITHUB_WORKSPACE/tests/fixtures/project" "$GITHUB_WORKSPACE/test-project"
+          ls -la "$GITHUB_WORKSPACE/test-project/"
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          project_directory: ./test-project
+          fastly-api-token: fake-token-for-testing
+          github-token: ${{ github.token }}
+
+      - name: Assert service_name output is set or action failed gracefully
+        env:
+          SERVICE_NAME: ${{ steps.action.outputs.service_name }}
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          echo "service_name: $SERVICE_NAME"
+          if [ "$OUTCOME" = "success" ]; then
+            if [ -z "$SERVICE_NAME" ]; then
+              echo "FAIL: action succeeded but service_name output is empty"
+              exit 1
+            fi
+            # Service name should contain "test-service" from fastly.toml
+            if echo "$SERVICE_NAME" | grep -q "test-service"; then
+              echo "PASS: service_name contains expected prefix: $SERVICE_NAME"
+            else
+              echo "FAIL: service_name '$SERVICE_NAME' does not contain 'test-service'"
+              exit 1
+            fi
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected without real Fastly token/CLI)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

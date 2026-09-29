@@ -40,7 +40,7 @@ runs:
           "https://actions.enforce.dev/actions/v1/record" >/dev/null 2>&1 || true
     # Download Fastly CLI
     - name: Set up Fastly CLI
-      uses: fastly/compute-actions/setup@a25cf83ef5c19ef7d86f1eebffcd8f6c02ddc786 # v14
+      uses: chainguard-actions/fastly-compute-actions/setup@f9041a3b6e3b196ccf4e6839f4250539d127892d # v14
       with:
         token: ${{ inputs.github-token }}
         cli_version: 'latest'
@@ -62,16 +62,16 @@ runs:
     - if: github.event.action == 'closed'
       working-directory: ${{ inputs.project_directory }}
       env:
-        SERVICE_NAME: ${{ steps.service-name.outputs.SERVICE_NAME }}
         FASTLY_API_TOKEN: ${{ inputs.fastly-api-token }}
+        SERVICE_NAME: ${{ steps.service-name.outputs.SERVICE_NAME }}
       run: fastly service delete --quiet --service-name "$SERVICE_NAME" --force --token "$FASTLY_API_TOKEN" || true
       shell: bash
     # Deploy to Fastly and let Fastly choose a subdomain of edgecompute.app to attach to the service
     - if: github.event.action != 'closed'
       working-directory: ${{ inputs.project_directory }}
       env:
-        SERVICE_NAME: ${{ steps.service-name.outputs.SERVICE_NAME }}
         FASTLY_API_TOKEN: ${{ inputs.fastly-api-token }}
+        SERVICE_NAME: ${{ steps.service-name.outputs.SERVICE_NAME }}
       run: |
         fastly compute publish --verbose -i --token "$FASTLY_API_TOKEN" --service-name "$SERVICE_NAME"
       shell: bash
@@ -79,8 +79,8 @@ runs:
     - if: github.event.action != 'closed'
       working-directory: ${{ inputs.project_directory }}
       env:
-        SERVICE_NAME: ${{ steps.service-name.outputs.SERVICE_NAME }}
         FASTLY_API_TOKEN: ${{ inputs.fastly-api-token }}
+        SERVICE_NAME: ${{ steps.service-name.outputs.SERVICE_NAME }}
       run: fastly service domain list --quiet --version latest --json --service-name="$SERVICE_NAME" --token "$FASTLY_API_TOKEN" | jq -r '.[0].Name'
       shell: bash
     - if: github.event.action != 'closed'
@@ -89,8 +89,8 @@ runs:
       shell: bash
       id: domain
       env:
-        SERVICE_NAME: ${{ steps.service-name.outputs.SERVICE_NAME }}
         FASTLY_API_TOKEN: ${{ inputs.fastly-api-token }}
+        SERVICE_NAME: ${{ steps.service-name.outputs.SERVICE_NAME }}
       run: |
         raw="$(fastly service domain list --quiet --version latest --json --service-name="$SERVICE_NAME" --token "$FASTLY_API_TOKEN" | jq -r '.[0].Name')"
         safe="$(printf '%s' "$raw" | tr -d '\n\r')"

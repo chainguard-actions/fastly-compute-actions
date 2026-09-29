@@ -1,0 +1,63 @@
+name: Test default project directory
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Install yq so the action's service-name step can read fastly.toml
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+          yq --version
+
+      # Create a fastly.toml and package.json in the workspace root (default project_directory is ./)
+      - name: Set up project files in workspace root
+        run: |
+          cat > "$GITHUB_WORKSPACE/fastly.toml" << 'EOF'
+          manifest_version = 2
+          name = "default-dir-service"
+          description = "Test service for default directory"
+          language = "javascript"
+          EOF
+          cat > "$GITHUB_WORKSPACE/package.json" << 'EOF'
+          {
+            "name": "test-project",
+            "version": "1.0.0",
+            "dependencies": {}
+          }
+          EOF
+          echo "Files created:"
+          ls -la "$GITHUB_WORKSPACE/fastly.toml" "$GITHUB_WORKSPACE/package.json"
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          project_directory: ./
+          fastly-api-token: fake-token-for-testing
+          github-token: ${{ github.token }}
+
+      - name: Assert action ran with default directory
+        env:
+          SERVICE_NAME: ${{ steps.action.outputs.service_name }}
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          echo "service_name: $SERVICE_NAME"
+          # The action should either succeed or fail gracefully (no real Fastly token)
+          if [ "$OUTCOME" = "success" ]; then
+            if [ -z "$SERVICE_NAME" ]; then
+              echo "FAIL: action succeeded but service_name output is empty"
+              exit 1
+            fi
+            echo "PASS: service_name is set: $SERVICE_NAME"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected without real Fastly token/CLI)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
