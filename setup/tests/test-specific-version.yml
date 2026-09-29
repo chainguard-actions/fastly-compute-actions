@@ -1,4 +1,4 @@
-name: Test specific CLI and Viceroy versions
+name: Test specific version installation
 on:
   workflow_dispatch:
 jobs:
@@ -9,25 +9,39 @@ jobs:
       - id: action
         uses: .
         with:
-          cli_version: 'v10.9.0'
-          viceroy_version: 'v0.9.4'
-        continue-on-error: true
-      - name: Assert specific versions installed or action ran
-        env:
-          OUTCOME: ${{ steps.action.outcome }}
+          cli_version: 'v10.15.0'
+          viceroy_version: 'v0.9.6'
+      - name: Assert fastly CLI specific version is installed
         run: |
-          echo "outcome: $OUTCOME"
-          if [ "$OUTCOME" = "success" ]; then
-            echo "Action succeeded, checking fastly binary..."
-            if ! command -v fastly >/dev/null 2>&1; then
-              echo "FAIL: fastly binary not found in PATH after successful action"
-              exit 1
-            fi
-            echo "fastly version: $(fastly version 2>&1 || true)"
-            echo "PASS: fastly CLI specific version is installed"
-          elif [ "$OUTCOME" = "failure" ]; then
-            echo "PASS: action failed gracefully (network/API issue or version not found in test environment)"
+          echo "Checking fastly CLI is available..."
+          if ! command -v fastly >/dev/null 2>&1; then
+            echo "FAIL: fastly CLI not found on PATH"
+            exit 1
+          fi
+          echo "fastly version output:"
+          fastly version
+          FASTLY_VERSION=$(fastly version 2>&1 | head -1)
+          echo "Installed version: $FASTLY_VERSION"
+          if echo "$FASTLY_VERSION" | grep -q "10.15.0"; then
+            echo "PASS: fastly CLI v10.15.0 is installed"
           else
-            echo "FAIL: unexpected outcome '$OUTCOME'"
+            echo "FAIL: expected fastly CLI v10.15.0 but got: $FASTLY_VERSION"
+            exit 1
+          fi
+      - name: Assert viceroy specific version is installed
+        run: |
+          echo "Checking viceroy is available..."
+          if ! command -v viceroy >/dev/null 2>&1; then
+            echo "FAIL: viceroy not found on PATH"
+            exit 1
+          fi
+          echo "viceroy version output:"
+          viceroy --version
+          VICEROY_VERSION=$(viceroy --version 2>&1 | head -1)
+          echo "Installed version: $VICEROY_VERSION"
+          if echo "$VICEROY_VERSION" | grep -q "0.9.6"; then
+            echo "PASS: viceroy v0.9.6 is installed"
+          else
+            echo "FAIL: expected viceroy v0.9.6 but got: $VICEROY_VERSION"
             exit 1
           fi

@@ -1,0 +1,28 @@
+name: Test invalid version input fails gracefully
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          cli_version: 'not-a-valid-semver'
+          viceroy_version: 'latest'
+        continue-on-error: true
+      - name: Assert action failed with invalid semver
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action correctly failed with invalid semver input"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "FAIL: action should have failed with invalid semver but succeeded"
+            exit 1
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

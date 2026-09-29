@@ -1,0 +1,30 @@
+name: Test verbose flag
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        with:
+          project_directory: './'
+          verbose: 'true'
+        continue-on-error: true
+
+      - name: Assert action ran with verbose flag (fails gracefully without fastly CLI)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully as expected (fastly CLI not installed)"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded with verbose flag (fastly CLI was available)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

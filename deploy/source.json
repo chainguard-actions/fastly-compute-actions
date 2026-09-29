@@ -2,6 +2,7 @@
   "owner": "fastly",
   "repo": "compute-actions",
   "version": "v14",
+  "path": "deploy",
   "commit_sha": "a25cf83ef5c19ef7d86f1eebffcd8f6c02ddc786",
   "url": "https://github.com/fastly/compute-actions",
   "policy_sha": "d636be7e43ef829af6e853da6b3c7566db9f72fe",

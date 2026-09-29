@@ -52,10 +52,10 @@ runs:
       id: service-name
       working-directory: ${{ inputs.project_directory }}
       env:
-        EVENT_NUMBER: ${{ github.event.number }}
+        PR_NUMBER: ${{ github.event.number }}
       run: |
-        raw="$(yq '.name' fastly.toml)-${EVENT_NUMBER}"
-        safe="$(printf '%s' "$raw" | tr -d '\n\r')"
+        raw="$(yq '.name' fastly.toml)-${PR_NUMBER}"
+        safe=$(printf '%s' "$raw" | tr -d '\n\r')
         echo "SERVICE_NAME=$safe" >> "$GITHUB_OUTPUT"
       shell: bash
     # Delete the Fastly Service
@@ -92,8 +92,8 @@ runs:
         FASTLY_API_TOKEN: ${{ inputs.fastly-api-token }}
         SERVICE_NAME: ${{ steps.service-name.outputs.SERVICE_NAME }}
       run: |
-        raw="$(fastly service domain list --quiet --version latest --json --service-name="$SERVICE_NAME" --token "$FASTLY_API_TOKEN" | jq -r '.[0].Name')"
-        safe="$(printf '%s' "$raw" | tr -d '\n\r')"
+        raw=$(fastly service domain list --quiet --version latest --json --service-name="$SERVICE_NAME" --token "$FASTLY_API_TOKEN" | jq -r '.[0].Name')
+        safe=$(printf '%s' "$raw" | tr -d '\n\r')
         echo "DOMAIN=$safe" >> "$GITHUB_OUTPUT"
     - if: github.event.action != 'closed'
       working-directory: ${{ inputs.project_directory }}
