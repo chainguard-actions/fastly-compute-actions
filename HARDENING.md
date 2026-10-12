@@ -10,53 +10,57 @@
 
 **Harden Agent Version:** `2`
 
-Action **fastly--compute-actions/v14** was hardened automatically. 3 finding(s) were identified and resolved across 1 iteration(s).
+Action **fastly--compute-actions/v14** was hardened automatically. 3 finding(s) were identified and resolved across 2 iteration(s).
 
 ## Findings Fixed
 
 ### script-injection (severity: high)
 
-Multiple run: blocks in preview/action.yml directly interpolate ${{ }} expressions into shell commands, enabling script injection. Affected lines:
-- Line 40: `echo "SERVICE_NAME=$(yq '.name' fastly.toml)-${{ github.event.number }}" >> "$GITHUB_OUTPUT"` — attacker-controlled github.event.number interpolated directly.
-- Line 46: `fastly service delete ... --service-name ${{ steps.service-name.outputs.SERVICE_NAME }} --force --token ${{ inputs.fastly-api-token }} || true` — step output and input token interpolated directly.
-- Line 53: `fastly compute publish ... --token ${{ inputs.fastly-api-token }} --service-name ${{ steps.service-name.outputs.SERVICE_NAME }}` — input token and step output interpolated directly.
-- Line 60: `fastly service domain list ... --service-name="${{ steps.service-name.outputs.SERVICE_NAME }}" --token ${{ inputs.fastly-api-token }}` — step output and input token interpolated directly.
-- Line 68: `echo "DOMAIN=$(fastly service domain list ... --service-name="${{ steps.service-name.outputs.SERVICE_NAME }}" --token ${{ inputs.fastly-api-token }} | jq -r '.[0].Name')" >> "$GITHUB_OUTPUT"` — step output and input token interpolated directly.
-- Line 75: `echo '...https://${{ steps.domain.outputs.DOMAIN }}...' >> $GITHUB_STEP_SUMMARY` — step output interpolated directly.
-All of these violate sub-rule (a): any ${{ ... }} expression directly inside a run: block is a script-injection risk.
+Multiple run: blocks in preview/action.yml directly interpolate ${{ }} expressions into shell commands, violating rule (a). Offending lines include:
+1. `run: echo "SERVICE_NAME=$(yq '.name' fastly.toml)-${{ github.event.number }}" >> "$GITHUB_OUTPUT"` — github.event.number interpolated directly into shell.
+2. `run: fastly service delete --quiet --service-name ${{ steps.service-name.outputs.SERVICE_NAME }} --force --token ${{ inputs.fastly-api-token }} || true` — step output and input interpolated directly.
+3. `fastly compute publish --verbose -i --token ${{ inputs.fastly-api-token }} --service-name ${{ steps.service-name.outputs.SERVICE_NAME }}` — inputs and step outputs interpolated directly.
+4. `run: fastly service domain list ... --service-name="${{ steps.service-name.outputs.SERVICE_NAME }}" --token ${{ inputs.fastly-api-token }}` — expressions interpolated directly.
+5. `run: echo "DOMAIN=$(fastly service domain list ... --service-name="${{ steps.service-name.outputs.SERVICE_NAME }}" --token ${{ inputs.fastly-api-token }} ...)" >> "$GITHUB_OUTPUT"` — expressions interpolated directly.
+6. `run: echo 'This pull-request has been deployed to Fastly and is available at <https://${{ steps.domain.outputs.DOMAIN }}> 🚀' >> $GITHUB_STEP_SUMMARY` — step output interpolated directly.
+All values should be moved to env: vars and referenced as quoted shell variables.
 
 Locations:
 
-- `preview/action.yml:40`
-- `preview/action.yml:46`
-- `preview/action.yml:53`
-- `preview/action.yml:60`
-- `preview/action.yml:68`
-- `preview/action.yml:75`
+- `preview/action.yml:38`
+- `preview/action.yml:43`
+- `preview/action.yml:49`
+- `preview/action.yml:55`
+- `preview/action.yml:63`
+- `preview/action.yml:72`
 
 ### github-env-injection (severity: high)
 
-preview/action.yml writes untrusted values derived from GitHub context directly to $GITHUB_OUTPUT without sanitization (no `printf '%s' ... | tr -d '\n\r'` step):
-- Line 40: `echo "SERVICE_NAME=$(yq '.name' fastly.toml)-${{ github.event.number }}" >> "$GITHUB_OUTPUT"` — github.event.number (attacker-controlled via PR number) is embedded directly in the GITHUB_OUTPUT write.
-- Line 68: `echo "DOMAIN=$(fastly service domain list ... --service-name="${{ steps.service-name.outputs.SERVICE_NAME }}" ...)" >> "$GITHUB_OUTPUT"` — steps.service-name.outputs.SERVICE_NAME (derived from github.event.number) is written to GITHUB_OUTPUT without sanitization.
+Two run: blocks in preview/action.yml write untrusted values to $GITHUB_OUTPUT without the required sanitization step (printf '%s' ... | tr -d '\n\r'):
+1. `echo "SERVICE_NAME=$(yq '.name' fastly.toml)-${{ github.event.number }}" >> "$GITHUB_OUTPUT"` — github.event.number (attacker-controlled via PR event) is written directly to GITHUB_OUTPUT with no newline stripping.
+2. `echo "DOMAIN=$(fastly service domain list ... --service-name="${{ steps.service-name.outputs.SERVICE_NAME }}" ...)" >> "$GITHUB_OUTPUT"` — a value derived from steps.service-name.outputs.SERVICE_NAME (itself derived from github.event.number) is written to GITHUB_OUTPUT without sanitization. An attacker could inject newlines to poison subsequent environment variables.
 
 Locations:
 
-- `preview/action.yml:40`
-- `preview/action.yml:68`
+- `preview/action.yml:38`
+- `preview/action.yml:63`
 
 ### unpinned-uses (severity: high)
 
-Multiple action references use mutable tag refs instead of full 40-character SHA commit hashes, making them vulnerable to supply-chain attacks if the tag is moved:
-- action.yml: `fastly/compute-actions/setup@v14` (line ~43), `fastly/compute-actions/build@v14` (line ~49), `fastly/compute-actions/deploy@v14` (line ~55)
-- preview/action.yml: `fastly/compute-actions/setup@v14` (line ~29)
-- preview/example-workflow.yml: `actions/checkout@v3` (line ~13), `fastly/compute-actions/preview@v14` (line ~14)
+Multiple uses: references use mutable version tags instead of pinned 40-character commit SHAs, making the action vulnerable to supply-chain attacks if the tag is moved:
+- action.yml: `fastly/compute-actions/setup@v14`
+- action.yml: `fastly/compute-actions/build@v14`
+- action.yml: `fastly/compute-actions/deploy@v14`
+- preview/action.yml: `fastly/compute-actions/setup@v14`
+- preview/example-workflow.yml: `actions/checkout@v3`
+- preview/example-workflow.yml: `fastly/compute-actions/preview@v14`
+All references should be pinned to a full 40-character hex commit SHA (e.g. `uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v3`).
 
 Locations:
 
-- `action.yml:43`
-- `action.yml:49`
-- `action.yml:55`
+- `action.yml:44`
+- `action.yml:50`
+- `action.yml:56`
 - `preview/action.yml:29`
 - `preview/example-workflow.yml:13`
 - `preview/example-workflow.yml:14`
@@ -65,15 +69,25 @@ Locations:
 
 ### Iteration 1
 
-**Fixes applied:** script-injection, github-env-injection, unpinned-uses
+**Fixes applied:** unpinned-uses, script-injection, github-env-injection
 
 **Notes:**
 
-Fixed all three findings across three files:
+Fixed all three findings across action.yml, preview/action.yml, and preview/example-workflow.yml:
 
-1. **unpinned-uses** (action.yml, preview/action.yml, preview/example-workflow.yml): Pinned all 6 action references to full 40-char SHAs. fastly/compute-actions/* → a25cf83ef5c19ef7d86f1eebffcd8f6c02ddc786 # v14; actions/checkout → a37ce9120846195fa4ece8f58b268e6043cb2f26 # v3.
+1. unpinned-uses: Pinned all 6 uses: references to full 40-char SHAs (fastly/compute-actions@a25cf83ef5c19ef7d86f1eebffcd8f6c02ddc786 for v14, actions/checkout@a37ce9120846195fa4ece8f58b268e6043cb2f26 for v3).
 
-2. **script-injection** (preview/action.yml): Moved all ${{ }} expressions out of run: blocks into env: blocks. github.event.number → EVENT_NUMBER, inputs.fastly-api-token → FASTLY_API_TOKEN, steps.service-name.outputs.SERVICE_NAME → SERVICE_NAME, steps.domain.outputs.DOMAIN → DOMAIN. All shell commands now reference plain env vars.
+2. script-injection: Moved all ${{ }} expressions in preview/action.yml run: blocks into env: blocks (EVENT_NUMBER, SERVICE_NAME, FASTLY_API_TOKEN, DOMAIN) and referenced them as quoted shell variables.
 
-3. **github-env-injection** (preview/action.yml): Sanitized values written to GITHUB_OUTPUT using `printf '%s' "$VAR" | tr -d '\n\r'` before writing. SERVICE_NAME (derived from github.event.number) and DOMAIN are both sanitized before being written to GITHUB_OUTPUT.
+3. github-env-injection: Both GITHUB_OUTPUT writes now use a two-step pattern: capture raw value first, then sanitize with `printf '%s' "$raw" | tr -d '\n\r'` before writing to GITHUB_OUTPUT.
+
+### Iteration 1
+
+**Fixes applied:** publish-gate
+
+**Notes:**
+
+Fixed two bare assignments in preview/action.yml that would abort the step under errexit if the command failed:
+1. Line 45: Added `|| true` to `raw="$(yq '.name' fastly.toml)-${EVENT_NUMBER}"` to preserve upstream behavior where yq ran inside echo/printf and its exit status was hidden.
+2. Line 89: Added `|| true` to `raw="$(fastly service domain list ... | jq -r '.[0].Name')"` for the same reason — upstream ran this inside echo/printf so a non-zero exit didn't abort the step.
 

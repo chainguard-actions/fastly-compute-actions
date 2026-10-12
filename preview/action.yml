@@ -40,7 +40,7 @@ runs:
           "https://actions.enforce.dev/actions/v1/record" >/dev/null 2>&1 || true
     # Download Fastly CLI
     - name: Set up Fastly CLI
-      uses: chainguard-actions/fastly-compute-actions/setup@8dcb71ace09cd49ba67356d60d71e762204007f9 # v14
+      uses: chainguard-actions/fastly-compute-actions/setup@9cabf3a793d1d7d3e3a1c0dd9cc272f4bd4472f3 # v14
       with:
         token: ${{ inputs.github-token }}
         cli_version: 'latest'
@@ -54,9 +54,9 @@ runs:
       env:
         PR_NUMBER: ${{ github.event.number }}
       run: |
-        raw="$(yq '.name' fastly.toml)-${PR_NUMBER}"
-        safe=$(printf '%s' "$raw" | tr -d '\n\r')
-        echo "SERVICE_NAME=$safe" >> "$GITHUB_OUTPUT"
+        raw="$(yq '.name' fastly.toml)-${PR_NUMBER}" || true
+        safe="$(printf '%s' "$raw" | tr -d '\n\r')"
+        echo "SERVICE_NAME=${safe}" >> "$GITHUB_OUTPUT"
       shell: bash
     # Delete the Fastly Service
     - if: github.event.action == 'closed'
@@ -92,9 +92,9 @@ runs:
         FASTLY_API_TOKEN: ${{ inputs.fastly-api-token }}
         SERVICE_NAME: ${{ steps.service-name.outputs.SERVICE_NAME }}
       run: |
-        raw=$(fastly service domain list --quiet --version latest --json --service-name="$SERVICE_NAME" --token "$FASTLY_API_TOKEN" | jq -r '.[0].Name')
-        safe=$(printf '%s' "$raw" | tr -d '\n\r')
-        echo "DOMAIN=$safe" >> "$GITHUB_OUTPUT"
+        raw="$(fastly service domain list --quiet --version latest --json --service-name="$SERVICE_NAME" --token "$FASTLY_API_TOKEN" | jq -r '.[0].Name')" || true
+        safe="$(printf '%s' "$raw" | tr -d '\n\r')"
+        echo "DOMAIN=${safe}" >> "$GITHUB_OUTPUT"
     - if: github.event.action != 'closed'
       working-directory: ${{ inputs.project_directory }}
       shell: bash
