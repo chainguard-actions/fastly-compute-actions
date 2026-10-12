@@ -40,7 +40,7 @@ runs:
           "https://actions.enforce.dev/actions/v1/record" >/dev/null 2>&1 || true
     # Download Fastly CLI
     - name: Set up Fastly CLI
-      uses: chainguard-actions/fastly-compute-actions/setup@c4a33d79ddb7fad8b9db1f933eaae06ccfc5b503 # v14
+      uses: chainguard-actions/fastly-compute-actions/setup@eac0ade8af07cb0b62427ba9a88f98036ea083f9 # v14
       with:
         token: ${{ inputs.github-token }}
         cli_version: 'latest'
