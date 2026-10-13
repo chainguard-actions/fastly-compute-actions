@@ -1,0 +1,47 @@
+name: Test with mock Fastly CLI
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install mock Fastly CLI
+        run: |
+          # Create a fake fastly binary that simulates the CLI behavior
+          cat > /usr/local/bin/fastly << 'EOF'
+          #!/bin/sh
+          # Fake fastly CLI for testing
+          if [ "$1" = "version" ]; then
+            echo "Fastly CLI version 10.0.0 (fake)"
+            exit 0
+          fi
+          if [ "$1" = "compute" ] && [ "$2" = "build" ]; then
+            echo "Building Compute package..."
+            echo "SUCCESS: Package built successfully (fake)"
+            exit 0
+          fi
+          echo "Unknown command: $*"
+          exit 1
+          EOF
+          chmod +x /usr/local/bin/fastly
+          fastly version
+
+      - name: Run action with mock CLI
+        id: action
+        uses: .
+        with:
+          project_directory: './'
+
+      - name: Assert action succeeded with mock CLI
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded with mock Fastly CLI"
+          else
+            echo "FAIL: expected success but got '$OUTCOME'"
+            exit 1
+          fi

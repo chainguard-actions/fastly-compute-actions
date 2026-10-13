@@ -1,0 +1,6 @@
+name = "test-compute-service"
+language = "javascript"
+manifest_version = 2
+
+[scripts]
+  build = "yarn build"

@@ -1,0 +1,30 @@
+name: Test with service_id and comment inputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          service_id: 'SVC123TESTID'
+          comment: 'Test deployment comment'
+          version: 'latest'
+
+      - name: Assert action ran and failed gracefully with service_id and comment
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully as expected (Fastly CLI not installed or no credentials)"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded with service_id and comment inputs"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

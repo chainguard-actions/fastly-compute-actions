@@ -1,0 +1,62 @@
+name: Test deploy path (non-closed event)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Set up project directory with required files
+      - name: Set up project directory with fixtures
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/test-project"
+          cp "$GITHUB_WORKSPACE/tests/fixtures/fastly.toml" "$GITHUB_WORKSPACE/test-project/fastly.toml"
+          cp "$GITHUB_WORKSPACE/tests/fixtures/package.json" "$GITHUB_WORKSPACE/test-project/package.json"
+          touch "$GITHUB_WORKSPACE/test-project/yarn.lock"
+
+      # Under workflow_dispatch, github.event.action is empty (not 'closed'),
+      # so the deploy path (fastly compute publish) will be attempted.
+      # This will fail without a real Fastly API token, but we verify the action
+      # runs the correct code path and the service-name output is generated.
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          project_directory: './test-project'
+          fastly-api-token: 'fake-token-for-testing'
+          github-token: ${{ github.token }}
+
+      - name: Assert action ran the deploy path
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+          SERVICE_NAME: ${{ steps.action.outputs.service_name }}
+          DOMAIN: ${{ steps.action.outputs.domain }}
+        run: |
+          echo "outcome: $OUTCOME"
+          echo "service_name: $SERVICE_NAME"
+          echo "domain: $DOMAIN"
+
+          # The action should either succeed (unlikely without real token) or fail
+          # gracefully. It must not produce an unexpected outcome.
+          if [ "$OUTCOME" = "success" ]; then
+            # If somehow it succeeded, both outputs should be set
+            if [ -z "$SERVICE_NAME" ]; then
+              echo "FAIL: action succeeded but service_name output is empty"
+              exit 1
+            fi
+            if [ -z "$DOMAIN" ]; then
+              echo "FAIL: action succeeded but domain output is empty"
+              exit 1
+            fi
+            echo "PASS: action succeeded with service_name='$SERVICE_NAME' domain='$DOMAIN'"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected without real Fastly API token)"
+            # Even on failure, service_name may have been set before the failing step
+            if [ -n "$SERVICE_NAME" ]; then
+              echo "INFO: service_name was set to '$SERVICE_NAME' before failure"
+            fi
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

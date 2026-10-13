@@ -1,0 +1,22 @@
+name: Test basic usage (default latest versions)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          token: ${{ github.token }}
+      - name: Assert Fastly CLI is installed
+        run: |
+          echo "Checking fastly CLI is on PATH..."
+          if ! command -v fastly >/dev/null 2>&1; then
+            echo "FAIL: fastly CLI not found on PATH"
+            exit 1
+          fi
+          FASTLY_VERSION="$(fastly version 2>&1 || true)"
+          echo "fastly version: $FASTLY_VERSION"
+          echo "PASS: fastly CLI is installed"

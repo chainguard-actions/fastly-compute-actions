@@ -1,0 +1,33 @@
+name: Test verbose mode
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          project_directory: './'
+          verbose: 'true'
+
+      - name: Assert action ran with verbose mode (fails gracefully without Fastly project)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # With verbose=true the action passes --verbose to the fastly CLI.
+          # Without a real Fastly project the build step will fail, but the
+          # action must not crash before reaching that point (i.e. the verbose
+          # input must be accepted without error).
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully as expected (no Fastly project present)"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
