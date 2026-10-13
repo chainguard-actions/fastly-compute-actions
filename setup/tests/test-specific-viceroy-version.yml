@@ -1,0 +1,28 @@
+name: Test specific Viceroy version installation
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          viceroy_version: 'v0.9.6'
+          token: ${{ github.token }}
+      - name: Assert Viceroy is installed at specified version
+        run: |
+          echo "Checking Viceroy version..."
+          if ! command -v viceroy &>/dev/null; then
+            echo "FAIL: viceroy not found in PATH"
+            exit 1
+          fi
+          VERSION=$(viceroy --version 2>&1 || true)
+          echo "viceroy version output: $VERSION"
+          if echo "$VERSION" | grep -q "0.9.6"; then
+            echo "PASS: viceroy version 0.9.6 is installed"
+          else
+            echo "FAIL: expected version 0.9.6 but got: $VERSION"
+            exit 1
+          fi

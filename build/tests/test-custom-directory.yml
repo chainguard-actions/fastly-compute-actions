@@ -1,0 +1,56 @@
+name: Test custom project directory
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create a mock project directory
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/my-compute-project"
+          echo "# Mock Compute project" > "$GITHUB_WORKSPACE/my-compute-project/fastly.toml"
+
+      - name: Install mock fastly CLI that records working directory
+        run: |
+          mkdir -p /tmp/mock-bin
+          cat > /tmp/mock-bin/fastly << 'EOF'
+          #!/bin/sh
+          # Mock fastly CLI - records working directory and args
+          echo "fastly mock: called with args: $*"
+          echo "cwd=$(pwd)" >> /tmp/fastly-calls.log
+          echo "args=$*" >> /tmp/fastly-calls.log
+          # Handle 'fastly version' (checkBin call)
+          if [ "$1" = "version" ]; then
+            echo "Fastly CLI version 10.0.0 (mock)"
+            exit 0
+          fi
+          # Handle 'fastly compute build --non-interactive'
+          if [ "$1" = "compute" ] && [ "$2" = "build" ]; then
+            echo "Building Compute package in $(pwd) (mock)..."
+            echo "SUCCESS: package built"
+            exit 0
+          fi
+          echo "Unknown command: $*"
+          exit 1
+          EOF
+          chmod +x /tmp/mock-bin/fastly
+          echo "/tmp/mock-bin" >> $GITHUB_PATH
+
+      - id: action
+        uses: .
+        with:
+          project_directory: './my-compute-project'
+
+      - name: Assert action ran in the correct directory
+        run: |
+          echo "=== fastly CLI calls ==="
+          cat /tmp/fastly-calls.log || echo "(no calls logged)"
+          echo "========================"
+          if grep -q 'my-compute-project' /tmp/fastly-calls.log; then
+            echo "PASS: fastly CLI was invoked in the correct project directory"
+          else
+            echo "FAIL: fastly CLI was NOT invoked in the expected project directory"
+            exit 1
+          fi

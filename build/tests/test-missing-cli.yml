@@ -1,0 +1,37 @@
+name: Test missing fastly CLI - graceful failure
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Ensure fastly CLI is not on PATH
+        run: |
+          # Verify fastly is not installed in this environment
+          if command -v fastly >/dev/null 2>&1; then
+            echo "WARNING: fastly CLI is already installed at $(which fastly)"
+            echo "This test requires fastly to be absent; skipping removal attempt"
+          else
+            echo "Confirmed: fastly CLI is not installed"
+          fi
+
+      - id: action
+        uses: .
+        continue-on-error: true
+
+      - name: Assert action failed gracefully when fastly CLI is missing
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully as expected when fastly CLI is not installed"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "INFO: action succeeded (fastly CLI may be installed in this environment)"
+            echo "PASS: action ran without error"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

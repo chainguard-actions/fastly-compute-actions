@@ -1,0 +1,9 @@
+# This file describes a Fastly Compute package.
+# To learn more visit https://developer.fastly.com/reference/fastly-toml/
+
+authors = ["test@example.com"]
+description = "Test Fastly Compute service"
+language = "javascript"
+manifest_version = 2
+name = "test-service"
+service_id = ""

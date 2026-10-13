@@ -1,0 +1,33 @@
+name: Test invalid CLI version string fails gracefully
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          cli_version: 'not-a-valid-semver'
+          viceroy_version: 'latest'
+
+      - name: Assert action failed gracefully for invalid semver
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The setup (pre) step validates the cli_version input as a SemVer string.
+          # "not-a-valid-semver" is not valid SemVer, so the action should call
+          # core.setFailed and the step should fail (not succeed or be skipped).
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed as expected for invalid semver input"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "FAIL: action unexpectedly succeeded with an invalid semver version"
+            exit 1
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

@@ -1,0 +1,32 @@
+name: Test basic usage (latest versions)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          token: ${{ github.token }}
+      - name: Assert Fastly CLI is installed
+        run: |
+          echo "Checking Fastly CLI installation..."
+          if ! command -v fastly &>/dev/null; then
+            echo "FAIL: fastly CLI not found in PATH"
+            exit 1
+          fi
+          VERSION=$(fastly version 2>&1 || true)
+          echo "fastly version: $VERSION"
+          echo "PASS: fastly CLI is installed"
+      - name: Assert Viceroy is installed
+        run: |
+          echo "Checking Viceroy installation..."
+          if ! command -v viceroy &>/dev/null; then
+            echo "FAIL: viceroy not found in PATH"
+            exit 1
+          fi
+          VERSION=$(viceroy --version 2>&1 || true)
+          echo "viceroy version: $VERSION"
+          echo "PASS: viceroy is installed"

@@ -1,0 +1,52 @@
+name: Test verbose mode
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install mock fastly CLI that records args
+        run: |
+          mkdir -p /tmp/mock-bin
+          cat > /tmp/mock-bin/fastly << 'EOF'
+          #!/bin/sh
+          # Mock fastly CLI - records args to a file for assertion
+          echo "fastly mock: called with args: $*"
+          # Write args to a file so we can assert on them
+          echo "$*" >> /tmp/fastly-calls.log
+          # Handle 'fastly version' (checkBin call)
+          if [ "$1" = "version" ]; then
+            echo "Fastly CLI version 10.0.0 (mock)"
+            exit 0
+          fi
+          # Handle 'fastly compute build --non-interactive --verbose'
+          if [ "$1" = "compute" ] && [ "$2" = "build" ]; then
+            echo "Building Compute package (mock, verbose)..."
+            echo "SUCCESS: package built"
+            exit 0
+          fi
+          echo "Unknown command: $*"
+          exit 1
+          EOF
+          chmod +x /tmp/mock-bin/fastly
+          echo "/tmp/mock-bin" >> $GITHUB_PATH
+
+      - id: action
+        uses: .
+        with:
+          project_directory: './'
+          verbose: 'true'
+
+      - name: Assert verbose flag was passed to fastly CLI
+        run: |
+          echo "=== fastly CLI calls ==="
+          cat /tmp/fastly-calls.log || echo "(no calls logged)"
+          echo "========================"
+          if grep -q -- '--verbose' /tmp/fastly-calls.log; then
+            echo "PASS: --verbose flag was passed to fastly CLI"
+          else
+            echo "FAIL: --verbose flag was NOT found in fastly CLI calls"
+            exit 1
+          fi
