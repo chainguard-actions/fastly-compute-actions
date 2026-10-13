@@ -1,4 +1,4 @@
-name: Test basic usage
+name: Test basic usage (default inputs)
 on:
   workflow_dispatch:
 jobs:
@@ -6,34 +6,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - name: Create minimal fastly.toml for testing
-        run: |
-          mkdir -p test-project
-          cat > test-project/fastly.toml <<'EOF'
-          manifest_version = 2
-          name = "test-project"
-          description = "A test Compute project"
-          authors = ["test@example.com"]
-          language = "other"
-          [scripts]
-            build = "echo 'build complete'"
-          EOF
+
       - id: action
         uses: .
-        with:
-          project_directory: './test-project'
-          cli_version: 'latest'
-          token: 'fake-token-for-testing'
         continue-on-error: true
-      - name: Assert action ran (setup phase completed)
+        with:
+          # No Fastly token or real project — action will fail at build/deploy,
+          # but the setup (CLI install) phase should complete.
+          project_directory: './'
+
+      - name: Assert action ran (setup installs CLI; build fails without a real project)
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
-          echo "action outcome: $OUTCOME"
-          # The action is expected to fail without valid Fastly credentials,
-          # but it should at least attempt to run (not be skipped or have a setup error)
-          if [ "$OUTCOME" = "skipped" ]; then
-            echo "FAIL: action was skipped unexpectedly"
+          echo "outcome: $OUTCOME"
+          # The action is expected to fail because there is no fastly.toml /
+          # Compute project in the workspace. What we verify is that it ran
+          # (not skipped) and failed gracefully rather than crashing the runner.
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully as expected (no Compute project)"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded unexpectedly — acceptable"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
             exit 1
           fi
-          echo "PASS: action ran (outcome: $OUTCOME)"

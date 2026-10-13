@@ -1,0 +1,48 @@
+name: Test specific Viceroy version
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        with:
+          viceroy_version: 'v0.9.6'
+          token: ${{ github.token }}
+
+      - name: Assert Fastly CLI is installed
+        run: |
+          echo "Checking fastly CLI is on PATH..."
+          if ! command -v fastly >/dev/null 2>&1; then
+            echo "FAIL: fastly CLI not found on PATH"
+            exit 1
+          fi
+          echo "PASS: fastly CLI found at $(command -v fastly)"
+
+      - name: Assert Viceroy is installed
+        run: |
+          echo "Checking viceroy is on PATH..."
+          if ! command -v viceroy >/dev/null 2>&1; then
+            echo "FAIL: viceroy not found on PATH"
+            exit 1
+          fi
+          echo "PASS: viceroy found at $(command -v viceroy)"
+
+      - name: Assert Viceroy version matches requested
+        run: |
+          echo "Running viceroy --version..."
+          VERSION_OUTPUT=$(viceroy --version 2>&1 || true)
+          echo "Output: $VERSION_OUTPUT"
+          if [ -z "$VERSION_OUTPUT" ]; then
+            echo "FAIL: viceroy --version produced no output"
+            exit 1
+          fi
+          if echo "$VERSION_OUTPUT" | grep -q "0.9.6"; then
+            echo "PASS: viceroy version 0.9.6 confirmed"
+          else
+            echo "FAIL: expected viceroy version 0.9.6 but got: $VERSION_OUTPUT"
+            exit 1
+          fi

@@ -1,0 +1,15 @@
+# This file describes a Fastly Compute package
+manifest_version = 2
+
+[profile]
+
+[scripts]
+
+[local_server]
+
+[setup]
+
+[setup.backends]
+
+name = "my-test-service"
+language = "javascript"

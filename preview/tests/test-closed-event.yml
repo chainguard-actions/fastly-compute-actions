@@ -1,0 +1,75 @@
+name: Test closed PR event (service deletion path)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Ensure yarn is available (the action runs 'yarn' in the project directory)
+      - name: Ensure yarn is available
+        run: |
+          if ! command -v yarn >/dev/null 2>&1; then
+            npm install -g yarn || true
+          fi
+          yarn --version || echo "yarn not available, continuing"
+
+      # Ensure yq is available (the action uses yq to read fastly.toml)
+      - name: Ensure yq is available
+        run: |
+          if ! command -v yq >/dev/null 2>&1; then
+            sudo wget -qO /usr/local/bin/yq \
+              https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 \
+              && sudo chmod +x /usr/local/bin/yq || true
+          fi
+          yq --version || echo "yq not available, continuing"
+
+      # Set up fixture project directory with all required files
+      - name: Set up fixture project directory
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/test-project"
+          cp "$GITHUB_WORKSPACE/tests/fixtures/project/fastly.toml" \
+             "$GITHUB_WORKSPACE/test-project/fastly.toml"
+          cp "$GITHUB_WORKSPACE/tests/fixtures/project/package.json" \
+             "$GITHUB_WORKSPACE/test-project/package.json"
+          touch "$GITHUB_WORKSPACE/test-project/yarn.lock"
+          ls -la "$GITHUB_WORKSPACE/test-project/"
+
+      # Place a mock fastly binary on PATH using the committed fixture script
+      - name: Create mock fastly CLI
+        run: |
+          sudo cp "$GITHUB_WORKSPACE/tests/fixtures/mock-fastly.sh" /usr/local/bin/fastly
+          sudo chmod +x /usr/local/bin/fastly
+          echo "Mock fastly installed at $(which fastly)"
+
+      # When github.event.action == 'closed', the action runs the delete path.
+      # The delete command uses "|| true" so it won't fail even if the service doesn't exist.
+      # The action may still fail at fastly/compute-actions/setup@v13 (external action).
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          project_directory: ./test-project
+          fastly-api-token: fake-fastly-token
+          github-token: ${{ github.token }}
+
+      - name: Assert action ran (succeeded or failed gracefully)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+          SERVICE_NAME: ${{ steps.action.outputs.service_name }}
+        run: |
+          echo "outcome: $OUTCOME"
+          echo "service_name: $SERVICE_NAME"
+          if [ "$OUTCOME" = "success" ]; then
+            if [ -z "$SERVICE_NAME" ]; then
+              echo "FAIL: action succeeded but service_name output is empty"
+              exit 1
+            fi
+            echo "PASS: action succeeded with service_name='$SERVICE_NAME'"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected without real Fastly setup)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

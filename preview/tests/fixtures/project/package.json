@@ -1,0 +1,8 @@
+{
+  "name": "my-test-service",
+  "version": "1.0.0",
+  "description": "Test Fastly Compute project",
+  "scripts": {
+    "build": "echo 'build'"
+  }
+}
