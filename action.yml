@@ -57,18 +57,18 @@ runs:
           -d "{\"repository\":\"${GITHUB_REPOSITORY}\",\"action\":\"${GITHUB_ACTION_REPOSITORY}\"}" \
           "https://actions.enforce.dev/actions/v1/record" >/dev/null 2>&1 || true
     - name: Set up Fastly CLI
-      uses: chainguard-actions/fastly-compute-actions/setup@d9f4d844c64088ccebf4b7e5c245093c1c0c7c8f # v14
+      uses: chainguard-actions/fastly-compute-actions/setup@bf6fa25147e4f598d2cc863eba9c6b43e5f13cb2 # v14
       with:
         cli_version: ${{ inputs.cli_version }}
         viceroy_version: ${{ inputs.viceroy_version }}
         token: ${{ inputs.token }}
     - name: Build Compute package
-      uses: chainguard-actions/fastly-compute-actions/build@d9f4d844c64088ccebf4b7e5c245093c1c0c7c8f # v14
+      uses: chainguard-actions/fastly-compute-actions/build@bf6fa25147e4f598d2cc863eba9c6b43e5f13cb2 # v14
       with:
         project_directory: ${{ inputs.project_directory }}
         verbose: ${{ inputs.verbose }}
     - name: Deploy Compute package
-      uses: chainguard-actions/fastly-compute-actions/deploy@d9f4d844c64088ccebf4b7e5c245093c1c0c7c8f # v14
+      uses: chainguard-actions/fastly-compute-actions/deploy@bf6fa25147e4f598d2cc863eba9c6b43e5f13cb2 # v14
       with:
         project_directory: ${{ inputs.project_directory }}
         service_id: ${{ inputs.service_id }}
